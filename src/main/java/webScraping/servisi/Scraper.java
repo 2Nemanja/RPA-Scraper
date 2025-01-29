@@ -59,9 +59,9 @@ public class Scraper {
     }
 
     public void startScraping() {
-        String filePath = createFileInWorkingDirectory();
+        String filePath = createFileInWorkingDirectory(); // Get CSV file path
         if (filePath != null) {
-            try (FileWriter fileWriter = new FileWriter(filePath)) {
+            try (FileWriter fileWriter = new FileWriter(filePath)) { // Preparing CSV file && setting headers
                 fileWriter.append("Naslov; Cena; Lokacija; Broj pregleda");
                 System.out.println("FileWriter successfully created!");
 
@@ -87,7 +87,7 @@ public class Scraper {
             pageNumberLimit = 2;
         }
 
-        while (pageNumber <= pageNumberLimit) {
+        while (pageNumber <= pageNumberLimit) { // Scraping specified number of pages
             String pageURL = generatePageURL(pageNumber);
             driver.get(pageURL);
 
@@ -100,11 +100,11 @@ public class Scraper {
 
             List<WebElement> listings = getListings();
             if (listings != null) {
-                for (WebElement listing : listings) {
+                for (WebElement listing : listings) { // Scraping data form each listing div one by one and appending the data in CSV file
                     if (scrapeListingData(listing, fileWriter) > 0) {
                         listingCounter++;
                     } else {
-                        System.out.println("WARNING: Listing that caused an issue located at index: " + listingCounter + " on page: " + pageNumber);
+                        System.out.println("ERR: Listing that caused an issue located at index: " + listingCounter + " on page: " + pageNumber);
                     }
                 }
             }
@@ -114,10 +114,12 @@ public class Scraper {
     }
 
     private String generatePageURL(int pageNumber) {
+        // Creating increment-like URL for going through website pages
         return baseUrl + "&page=" + pageNumber;
     }
 
     private boolean waitForPageToLoad() {
+        // Driver wait used for ensuring whole page has been loaded before doing any work on it
         try {
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
             wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//*[@id=\"__next\"]/div/div[3]/div/div/div[2]/div/div[2]")));
@@ -130,17 +132,18 @@ public class Scraper {
 
     private List<WebElement> getListings() {
         try {
-            JavascriptExecutor jsExecutor = (JavascriptExecutor) driver;
+            JavascriptExecutor jsExecutor = (JavascriptExecutor) driver; // Added for safety reasons to prevent lazy loading
             List<WebElement> listings = null;
             int previousCount = 0;
 
             while (true) {
+                // Ensuring all listings have been loaded by scrolling to the botttom of the page
                 jsExecutor.executeScript("window.scrollTo(0, document.body.scrollHeight);");
 
                 WebElement listingsWrapper = driver.findElement(By.xpath("//*[@id=\"__next\"]/div/div[3]/div/div/div[2]/div/div[2]"));
                 listings = listingsWrapper.findElements(By.xpath("./div[not(contains(@class, 'Banner'))]")); // Filtering 2 invisible banner divs
 
-                if (listings.size() > previousCount) {
+                if (listings.size() > previousCount) { // Checking if all listings loaded succcessfuly
                     previousCount = listings.size();
                 } else {
                     break;
@@ -186,19 +189,20 @@ public class Scraper {
                 System.err.println("ERR: Trying to read from an empty file!");
             }
 
+            // Splitting data by headers (Title, price, views and location)
             String[] headers = line.split(";");
             int locationHeaderIndex = -1;
 
             for (int i = 0; i < headers.length; i++) {
                 if (headers[i].trim().equalsIgnoreCase("Lokacija")) {
-                    locationHeaderIndex = i;
+                    locationHeaderIndex = i; // Getting Lokacija header position
                     break;
                 }
             }
 
             while ((line = reader.readLine()) != null) {
                 String[] values = line.split(";");
-                locations.add(values[locationHeaderIndex].trim());
+                locations.add(values[locationHeaderIndex].trim()); // Adding the Locations in a List for finding the max
             }
 
             location = findMostFrequentLocation(locations);
@@ -209,9 +213,13 @@ public class Scraper {
     }
 
     private String findMostFrequentLocation(List<String> locatons) {
+        /*Structuring the Locations in a HashMap for efficiency purposes
+        * by using HashMaps most frequently appeared Location will be calculated
+        *  while the Locations are being added in a HashMap, thanks to Value incrment*/
         HashMap<String, Integer> locationMap = new HashMap<>();
         try {
             for(String location : locatons) {
+                // Putting the Location in the HashMap && incrmenting the Value part if that Location is already in the Map
                 locationMap.put(location, locationMap.getOrDefault(location, 0) + 1);
             }
         }catch (Exception e) {
@@ -221,6 +229,7 @@ public class Scraper {
         int maxValue = 0;
         String mostFrequentLocation = null;
 
+        // Comparing the Values for each Key/Value pair to find the Location with the highest value
         for (String key : locationMap.keySet()) {
             int value = locationMap.get(key);
             if (value > maxValue) {

@@ -1,6 +1,5 @@
-package robot;
+package webScraping.servisi;
 
-import webScraping.servisi.Scraper;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -18,7 +17,7 @@ public class KPRobot {
     public static Properties config = new Properties();
 
     static {
-        try {
+        try { // Loading configuration file
             File configFile = new File("//home/nemanja/IdeaProjects/RPA-task/config.Properties");
             if (!configFile.exists()) {
                 System.err.println("Configuration file not found at: " + configFile.getAbsolutePath());
@@ -29,16 +28,17 @@ public class KPRobot {
                 config.load(reader);
             } catch (IOException e) {
                 System.err.println("Error reading configuration file: " + e.getMessage());
-                System.exit(1); // Exit if config file can't be read
+                System.exit(1);
             }
         } catch (Exception e) {
             System.err.println("Error loading configuration file: " + e.getMessage());
-            System.exit(1); // Exit on any other error
+            System.exit(1);
         }
     }
 
     @Test
     void setup() throws InterruptedException {
+        // ChromeDriver initialisation
         String chromeDriverPath = config.getProperty("chromedriver_path");
         if (chromeDriverPath == null || chromeDriverPath.isEmpty()) {
             throw new RuntimeException("ERR: 'chromedriver_path' not specified in the config file!");
@@ -46,7 +46,7 @@ public class KPRobot {
         System.setProperty("webdriver.chrome.driver", chromeDriverPath);
 
         try {
-            driver = new ChromeDriver();
+            driver = new ChromeDriver(); // ChromeDriver instance which will be used to automate website use
             driver.manage().timeouts().implicitlyWait(10, TimeUnit.SECONDS);
         } catch (Exception e) {
             throw new RuntimeException("ERR: ChromeDriver initialization failed: " + e.getMessage());
@@ -65,13 +65,14 @@ public class KPRobot {
 
         try {
             WebElement minimizeButton = driver.findElement(By.xpath("//*[@id=\"kp-portal\"]/div/div/aside/div/div/button/span"));
-            minimizeButton.click();
+            minimizeButton.click(); // Closing Sign Up form
         } catch (NoSuchElementException e) {
             System.err.println("ERR: Minimize button not found!: " + e.getMessage());
         }
     }
 
     public void scraping() throws IOException, InterruptedException {
+        // Scraper instance && and runner
         String URL = driver.getCurrentUrl();
         final Scraper scraper = new Scraper(URL, driver);
         System.out.println("Starting to scrape on: " + URL);
@@ -103,7 +104,6 @@ public class KPRobot {
         searchButton.click();
         Thread.sleep(2000);
 
-        // Apply filters
         applyFilters();
 
         // Start scraping
@@ -120,18 +120,18 @@ public class KPRobot {
             System.err.println("ERROR: Couldn't run 'sendToWebsiteForm' function!" + e.getMessage());
         }
 
-
         // Close the driver
         CloseDriver();
     }
 
     private void applyFilters() throws InterruptedException {
         try {
-            // Open filters and set prices from config
+            // Open filters and set prices from config file
             WebElement filtersButton = driver.findElement(By.xpath("//*[@id=\"__next\"]/div/div[3]/div/div/div[2]/div/section[1]/div[1]/ul/li[5]/button/span"));
             filtersButton.click();
             Thread.sleep(2000);
 
+            // Price range specification
             WebElement lowestPrice = driver.findElement(By.xpath("//*[@id=\"priceFrom\"]"));
             lowestPrice.click();
             lowestPrice.sendKeys(config.getProperty("bottom_price", "600"));
@@ -153,7 +153,7 @@ public class KPRobot {
 
             WebElement applyButton = driver.findElement(By.xpath("//*[@id=\"__next\"]/div/div[1]/div/div/div/div/div/div[2]/form/section/" +
                     "div/div[2]/div/div/div[2]/button[2]"));
-            applyButton.click();
+            applyButton.click(); // Search for listings with custom filtters
             Thread.sleep(3000);
         } catch (NoSuchElementException e) {
             throw new RuntimeException("ERR: Couldn't apply filters: " + e.getMessage());
@@ -171,8 +171,11 @@ public class KPRobot {
             String locationToSend = sendMostFrequentLocation();
             placeholder.sendKeys(locationToSend);
             Thread.sleep(1000);
+
+            WebElement sendAnswerButton = driver.findElement(By.xpath("//*[@id=\"mG61Hd\"]/div[2]/div/div[3]/div[1]/div[1]/div/span/span"));
+            sendAnswerButton.click();
         } catch (NoSuchElementException e) {
-            System.err.println("ERR: Couldn't fill Google Form: " + e.getMessage());
+            System.err.println("ERR: Couldn't fill Website Form: " + e.getMessage());
         }
     }
 
